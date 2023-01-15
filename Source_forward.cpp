@@ -1,6 +1,8 @@
-#include <iostream>
 #include "Matrix.cpp"
-using namespace std;
+
+using std::cout;
+using std::endl;
+using std::string;
 
 // настройка гиперматретров нейросети
 //int INPUT_DIM = 4;
@@ -88,5 +90,4 @@ int main() {
     int pred_class = probs.argmax();
     string class_names[3] = {"Setosa", "Versicolor", "Virginica"};
     cout << "Predicted class: " << class_names[pred_class] << endl;
-
 }
