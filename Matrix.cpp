@@ -12,9 +12,10 @@ using std::initializer_list;
 template <typename Type>
 struct matrix {
 public:
-    /*
+    /**
      * Объект класса можно задать как matrix<тип данных> x;
      * Если необходимо матрицу заполнить определёнными числами: matrix x = {{1, 2}, {2, 1}};
+     * Конструктор также принимает vector.
      * В случае указания 1-мерного массива (matrix x = {1, 2, 3};) матрица примет вид вектора-строки.
      * При желании можно сразу указать размеры матрицы при создании объекта класса как martix<тип данных> x(m, n);
      * Реализованы такие операции как сложение и умножение матриц, умножение и деление матрицы на число,
@@ -35,6 +36,17 @@ public:
                 mtx[i][j] = *(m_ptr->begin()+j);
         }
     }
+
+    matrix(vector<vector <Type>> l) {
+        size_m = l.size();
+        size_n = l[0].size();
+        load_size(size_m, size_n);
+
+        for (int i = 0; i < size_m; i++)
+            for (int j = 0; j < size_n; j++)
+                mtx[i][j] = l[i][j];
+    }
+
     matrix(initializer_list <Type> l) {
         size_m = 1;
         size_n = l.size();
@@ -44,11 +56,24 @@ public:
         for (int i = 0; i < size_n; i++)
             mtx[0][i] = *(ptr+i);
     }
+
+    matrix(vector <Type> l) {
+        size_m = 1;
+        size_n = l.size();
+        load_size(size_m, size_n);
+
+        for (int i = 0; i < size_n; i++)
+            mtx[0][i] = l[i];
+    }
+
     matrix(int m = 0, int n = 1){
         load_size(m, n);
     }
+    ~matrix() {
+        mtx.clear();
+    }
 
-    /*
+    /**
      * Вернуть строку/стобец матрицы.
      * Если необходимо заменить какой-то элемент матрицы matrix x: x[i][j] = y.
      */
@@ -491,7 +516,7 @@ public:
         return c;
     }
 
-    /*Получить матрицу из 2-йного вектора*/
+    /**Получить матрицу из 2-йного вектора*/
     void get_matrix(vector<vector<Type>> m) {
         size_m = m.size();
         size_n = m.at(0).size();
@@ -501,7 +526,7 @@ public:
                 mtx[i][j] = m[i][j];
     }
 
-    /* Заполнить матрицу целыми числами в определённом диапозоне */
+    /** Заполнить матрицу целыми числами в определённом диапозоне */
     void randint(int from, int to) {
         if (size_m != 0) {
             srand(clock());
@@ -514,7 +539,7 @@ public:
         }
     }
 
-    /* Заполнить матрицу действительными числами в определённом диапозоне */
+    /** Заполнить матрицу действительными числами в определённом диапозоне */
     void randf(double from = 0, double to = 1) {
         if (size_m != 0) {
             srand(clock());
@@ -566,7 +591,7 @@ public:
         return c;
     }
 
-    /*e^x где x - каждый элемент матрицы*/
+    /**e^x где x - каждый элемент матрицы*/
     matrix<Type> expa() {
         matrix c;
         c.load_size(size_m, size_n);
@@ -584,7 +609,7 @@ public:
         return sum;
     }
 
-    /*Максимум из кадого столбца матрицы*/
+    /**Максимум из кадого столбца матрицы*/
     int argmax() {
         double max = mtx[0][0];
         int index = 0;
@@ -597,7 +622,7 @@ public:
         return index;
     }
 
-    /*Транспонирование матрицы*/
+    /**Транспонирование матрицы*/
     matrix<Type> T(){
         matrix c;
         c.load_size(size_n, size_m);
@@ -606,12 +631,29 @@ public:
                 c[j][i] = mtx[i][j];
         return c;
     };
+
+    void push_back(Type x) {
+        vector<Type> c = {x};
+        mtx.push_back(c);
+        size_m = mtx.size();
+        size_n = mtx[0].size();
+
+    }
+
+    int size() {
+        return size_m;
+    }
+
+    vector<int> sizes() {
+        vector<int> c  = {size_m, size_n};
+        return c;
+    }
 private:
     vector<vector<Type>> mtx;
     int size_m = 0, size_n = 1;
 };
 
-/*Фунция активации RELU*/
+/**Фунция активации RELU*/
 template <class T>
 matrix<T> relu(matrix<T> mtx) {
     return mtx.maximum();
@@ -623,7 +665,7 @@ matrix<T> softmax(matrix<T> mtx) {
     return out/out.sum();
 }
 
-/*Заполнить матрицу размерами m * n действительными числами от 0 до 1*/
+/**Заполнить матрицу размерами m * n действительными числами от 0 до 1*/
 matrix<double> randn(int m = 1, int n = 1) {
     matrix<double> c;
     c.load_size(m, n);
@@ -631,7 +673,7 @@ matrix<double> randn(int m = 1, int n = 1) {
     return c;
 }
 
-/*Заполнить матрицу размерами m * n 0*/
+/**Заполнить матрицу размерами m * n 0*/
 matrix<double> zeros(int m, int n) {
     matrix<double> c;
     c.load_size(m, n);
@@ -643,14 +685,14 @@ double sparse_cross_entropy(matrix<T> z, int y) {
     return -log(z[0][y]);
 }
 
-/*Получить вектор правильного класса*/
+/**Получить вектор правильного класса*/
 matrix<double> to_full(int y, int num_classes) {
     matrix y_full = zeros(1, num_classes);
     y_full[0][y] = 1;
     return y_full;
 }
 
-/*Производная от функции активации RELU*/
+/**Производная от функции активации RELU*/
 template <class T>
 matrix<double> relu_deriv(matrix<T> t) {
     return (matrix<double>) (t >= 0);
