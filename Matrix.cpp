@@ -1,6 +1,7 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
+#include <chrono>
 
 using std::cout;
 using std::endl;
@@ -8,6 +9,16 @@ using std::exp;
 using std::vector;
 using std::initializer_list;
 
+using std::chrono::time_point;
+using std::chrono::system_clock;
+using std::chrono::nanoseconds;
+
+int64_t nano() {
+    time_point<system_clock> now = system_clock::now();
+    auto duration = now.time_since_epoch();
+    auto nanosec = duration_cast<nanoseconds>(duration);
+    return nanosec.count();
+}
 
 template <typename Type>
 struct matrix {
@@ -529,7 +540,7 @@ public:
     /** Заполнить матрицу целыми числами в определённом диапозоне */
     void randint(int from, int to) {
         if (size_m != 0) {
-            srand(clock());
+            srand(nano());
             for (int i = 0; i < size_m; i++)
                 for (int j = 0; j < size_n; j++)
                     mtx[i][j] = from + rand() % to;
@@ -542,7 +553,7 @@ public:
     /** Заполнить матрицу действительными числами в определённом диапозоне */
     void randf(double from = 0, double to = 1) {
         if (size_m != 0) {
-            srand(clock());
+            srand(nano());
             for (int i = 0; i < size_m; i++)
                 for (int j = 0; j < size_n; j++)
                     mtx[i][j] = from + rand() / ((double) RAND_MAX / (to - from));
