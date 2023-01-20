@@ -2,12 +2,22 @@
 #include <fstream>
 #include <cstring>
 #include <algorithm>
+#include <SFML/Graphics.hpp>
+#include <cmath>
+
 using std::string;
 using std::ifstream;
 using std::getline;
 using std::strtok;
 using std::find;
 using std::distance;
+using std::abs;
+
+using sf::Event;
+using sf::RenderWindow;
+using sf::CircleShape;
+using sf::Color;
+using sf::VertexArray;
 
 int INPUT_DIM = 4;
 int OUT_DIM = 3;
@@ -101,6 +111,49 @@ double calc_accuracy() {
     return acc;
 }
 
+/**Нарисовать график зависимости элемента массива от его индекса (Beta)*/
+template <class T>
+void draw_graph(vector<T> mas, int width = 600, int height = 600) {
+    int W = width, H = height;
+    RenderWindow window(sf::VideoMode(W, H), "Graph");
+
+    float x0 = 10;
+    float y0 = H-10;
+
+    int count = mas.size();
+    float scale = (count*0.8)/W;
+
+    // Массив точек, из которых образуется ломаная кривая
+    VertexArray lines(sf::LineStrip, count);
+
+    while (window.isOpen()) {
+        Event event;
+        while (window.pollEvent(event))
+        {
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
+
+        // Заливка фона
+        window.clear(Color::White);
+
+        // Строим график зависимости, задавая координаты и цвет
+        for (unsigned long int i = 0; i < count;  i++) {
+            double x = (double) i/W;
+            double y = mas[i];
+
+            double x1 = x0 + x * scale;
+            double y1 = y0 - y * scale;
+
+            lines[i].position.x = x1;
+            lines[i].position.y = y1;
+            lines[i].color = Color::Blue;
+        }
+        window.draw(lines);
+        window.display();
+    }
+}
+
 int main() {
     /**
      * Алгоритм обучения нейросети и с оценкой точности предсказывания.
@@ -153,5 +206,6 @@ int main() {
     /**Найдём точность предсказания*/
     double accuracy = calc_accuracy();
     cout << "Accuracy: " << accuracy << endl;
+    draw_graph(loss_arr);
     return 0;
 }
