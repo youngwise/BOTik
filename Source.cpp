@@ -12,6 +12,7 @@ using std::strtok;
 using std::find;
 using std::distance;
 using std::abs;
+using std::abort;
 
 using sf::Event;
 using sf::RenderWindow;
@@ -21,7 +22,7 @@ using sf::VertexArray;
 
 int INPUT_DIM = 4;
 int OUT_DIM = 3;
-int H_DIM = 5;
+int H_DIM = 10;
 
 matrix<double> W1, b1, W2, b2;
 
@@ -113,7 +114,7 @@ double calc_accuracy() {
 
 /**Нарисовать график зависимости элемента массива от его индекса (Beta)*/
 template <class T>
-void draw_graph(vector<T> mas, int width = 600, int height = 600) {
+void draw_graph(vector<T> mas, float scale, int width = 600, int height = 600) {
     int W = width, H = height;
     RenderWindow window(sf::VideoMode(W, H), "Graph");
 
@@ -121,7 +122,6 @@ void draw_graph(vector<T> mas, int width = 600, int height = 600) {
     float y0 = H-10;
 
     int count = mas.size();
-    float scale = (count*0.8)/W;
 
     // Массив точек, из которых образуется ломаная кривая
     VertexArray lines(sf::LineStrip, count);
@@ -138,8 +138,8 @@ void draw_graph(vector<T> mas, int width = 600, int height = 600) {
         window.clear(Color::White);
 
         // Строим график зависимости, задавая координаты и цвет
-        for (unsigned long int i = 0; i < count;  i++) {
-            double x = (double) i/W;
+        for (int i = 0; i < count;  i++) {
+            double x = i/(scale*3);
             double y = mas[i];
 
             double x1 = x0 + x * scale;
@@ -157,8 +157,7 @@ void draw_graph(vector<T> mas, int width = 600, int height = 600) {
 int main() {
     /**
      * Алгоритм обучения нейросети и с оценкой точности предсказывания.
-     * В планах реализовать вывод графика как отчёта точности предсказывания,
-     * а также реализовать класс для создания динамической нейросети!
+     * В планах реализовать класс для создания динамической нейросети!
      */
 
     W1 = randn(INPUT_DIM, H_DIM);
@@ -166,33 +165,43 @@ int main() {
     W2 = randn(H_DIM, OUT_DIM);
     b2 = randn(1, OUT_DIM);
 
+    W1 = (W1 - 0.5) * 2 * sqrt(1./INPUT_DIM);
+    b1 = (b1 - 0.5) * 2 * sqrt(1./INPUT_DIM);
+    W2 = (W2 - 0.5) * 2 * sqrt(1./H_DIM);
+    b2 = (b2 - 0.5) * 2 * sqrt(1./H_DIM);
+
     /**Задаём коэффициент обучения и кол-во эпох обучения*/
-    double ALPHA = 0.001;
-    int NUM_EPOCHS = 100;
+    double ALPHA = 0.002;
+    int NUM_EPOCHS = 400;
+    int BATCH_SIZE = 50;
 
     vector<double> loss_arr;
 
-    for (int ep = 0; ep < NUM_EPOCHS; ep++)
-        for (int i = 0; i < dataset.size(); i++) {
-            matrix x = dataset[i][0];
-            int y = dataset[i][1][0];
+    for (int ep = 0; ep < NUM_EPOCHS; ep++) {
+        dataset.shuffle_matrix();
+        for (int i = 0; i < dataset.size() / BATCH_SIZE; i++) {
+            matrix slice = dataset.slice(i*BATCH_SIZE, i*BATCH_SIZE+BATCH_SIZE);
+            matrix batch = slice.split<double>();
+
+            matrix x = batch[0][0];
+            matrix y = batch[0][1];
 
             // Forward
             matrix t1 = x * W1 + b1;
             matrix h1 = relu(t1);
             matrix t2 = h1 * W2 + b2;
-            matrix z = softmax(t2);
-            double E = sparse_cross_entropy(z, y);
+            matrix z = softmax_batch(t2);
+            double E = sparse_cross_entropy_batch(z, y).sum();
 
             // Backward
-            matrix y_full = to_full(y, OUT_DIM);
+            matrix y_full = to_full_batch(y, OUT_DIM);
             matrix dE_dt2 = z - y_full;
             matrix dE_dW2 = h1.T() * dE_dt2;
-            matrix dE_db2 = dE_dt2;
+            matrix dE_db2 = dE_dt2.sum_axis(0);
             matrix dE_dh1 = dE_dt2 * W2.T();
             matrix dE_dt1 = dE_dh1 ^ relu_deriv(t1);
             matrix dE_dW1 = x.T() * dE_dt1;
-            matrix dE_db1 = dE_dt1;
+            matrix dE_db1 = dE_dt1.sum_axis(0);
 
             // Update
             W1 -= ALPHA * dE_dW1;
@@ -202,10 +211,15 @@ int main() {
 
             loss_arr.push_back(E);
         }
+    }
 
     /**Найдём точность предсказания*/
     double accuracy = calc_accuracy();
     cout << "Accuracy: " << accuracy << endl;
-    draw_graph(loss_arr);
+    draw_graph(loss_arr, 5);
+
+    //Проверяем нейросеть: подаём на вход 4 признака цветка ирис-вержиника (не из обучаемого датасета!)
+    matrix xx = {7.9, 3.1, 7.5, 1.8};
+    cout << class_names[predict(xx).argmax()];
     return 0;
 }
