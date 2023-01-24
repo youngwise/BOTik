@@ -2,12 +2,18 @@
 #include <iostream>
 #include <cmath>
 #include <chrono>
+#include <algorithm>
+#include <random>
 
 using std::cout;
 using std::endl;
 using std::exp;
 using std::vector;
 using std::initializer_list;
+using std::default_random_engine;
+using std::shuffle;
+using std::copy;
+using std::string;
 
 using std::chrono::time_point;
 using std::chrono::system_clock;
@@ -77,8 +83,9 @@ public:
             mtx[0][i] = l[i];
     }
 
-    matrix(int m = 0, int n = 1){
-        load_size(m, n);
+    matrix(int m = 0, int n = 0){
+        if (m != 0)
+            load_size(m, n);
     }
     ~matrix() {
         mtx.clear();
@@ -93,27 +100,50 @@ public:
     }
 
     friend matrix<Type> operator+(matrix<Type> m1, matrix<Type> m2) {
-        if(m1.size_n+m1.size_m == m2.size_m + m2.size_n) {
+        if(m1.size_n == m2.size_n) {
             int s_m = m1.size_m;
             int s_n = m1.size_n;
             matrix<Type> c(s_m, s_n);
 
             for (int i = 0; i < s_m; i++)
-                for (int j = 0; j < s_n; j++) {
-                    c[i][j] = m1[i][j] + m2[i][j];
-                }
+                for (int j = 0; j < s_n; j++)
+                    c[i][j] = m1[i][j] + m2[m2.size_m == 1 ? 0 : i][j];
             return c;
         } else {
             cout << "Error of matrix sum:\n\tmatrix sizes do not match!" << endl;
             abort();
         }
+    }
+
+    friend matrix<Type> operator+(matrix<Type> m1, Type x) {
+        int s_m = m1.size_m;
+        int s_n = m1.size_n;
+        matrix<Type> c(s_m, s_n);
+
+        for (int i = 0; i < s_m; i++)
+            for (int j = 0; j < s_n; j++) {
+                c[i][j] = m1[i][j] + x;
+            }
+        return c;
+    }
+
+    friend matrix<Type> operator+(Type x, matrix<Type> m1) {
+        int s_m = m1.size_m;
+        int s_n = m1.size_n;
+        matrix<Type> c(s_m, s_n);
+
+        for (int i = 0; i < s_m; i++)
+            for (int j = 0; j < s_n; j++) {
+                c[i][j] = m1[i][j] + x;
+            }
+        return c;
     }
 
     matrix<Type>& operator+=(matrix<Type> m) {
-        if(size_m+size_n == m.size_m + m.size_n) {
+        if(size_n == m.size_n) {
             for (int i = 0; i < size_m; i++)
                 for (int j = 0; j < size_n; j++) {
-                    mtx[i][j] += m[i][j];
+                    mtx[i][j] += m[m.size_m == 1 ? 0 : i][j];
                 }
             return *this;
         } else {
@@ -122,15 +152,23 @@ public:
         }
     }
 
+    matrix<Type>& operator+=(Type x) {
+        for (int i = 0; i < size_m; i++)
+            for (int j = 0; j < size_n; j++) {
+                mtx[i][j] += x;
+            }
+        return *this;
+    }
+
     friend matrix<Type> operator-(matrix<Type> m1, matrix<Type> m2) {
-        if(m1.size_m + m1.size_n == m2.size_m + m2.size_n) {
+        if(m1.size_n == m2.size_n) {
             int s_m = m1.size_m;
             int s_n = m1.size_n;
             matrix<Type> c(s_m, s_n);
 
             for (int i = 0; i < s_m; i++)
                 for (int j = 0; j < s_n; j++) {
-                    c[i][j] = m1[i][j] - m2[i][j];
+                    c[i][j] = m1[i][j] - m2[m2.size_m == 1 ? 0 : i][j];
                 }
             return c;
         } else {
@@ -139,17 +177,48 @@ public:
         }
     }
 
+    friend matrix<Type> operator-(matrix<Type> m1, Type x) {
+        int s_m = m1.size_m;
+        int s_n = m1.size_n;
+        matrix<Type> c(s_m, s_n);
+
+        for (int i = 0; i < s_m; i++)
+            for (int j = 0; j < s_n; j++) {
+                c[i][j] = m1[i][j] - x;
+            }
+        return c;
+    }
+
+    friend matrix<Type> operator-(Type x, matrix<Type> m1) {
+        int s_m = m1.size_m;
+        int s_n = m1.size_n;
+        matrix<Type> c(s_m, s_n);
+
+        for (int i = 0; i < s_m; i++)
+            for (int j = 0; j < s_n; j++) {
+                c[i][j] = x - m1[i][j];
+            }
+        return c;
+    }
+
     matrix<Type>& operator-=(matrix<Type> m) {
-        if(size_m+size_n == m.size_m + m.size_n) {
+        if(size_n == m.size_n) {
             for (int i = 0; i < size_m; i++)
-                for (int j = 0; j < size_n; j++) {
-                    mtx[i][j] -= m[i][j];
-                }
+                for (int j = 0; j < size_n; j++)
+                    mtx[i][j] -= m[m.size_m == 1 ? 0 : i][j];
             return *this;
         } else {
             cout << "Error of matrix subtract:\n\tmatrix sizes do not match!" << endl;
             abort();
         }
+    }
+
+    matrix<Type>& operator-=(Type x) {
+        for (int i = 0; i < size_m; i++)
+            for (int j = 0; j < size_n; j++) {
+                mtx[i][j] -= x;
+            }
+        return *this;
     }
 
     friend matrix<Type> operator*(matrix<Type> m1, matrix<Type> m2) {
@@ -160,7 +229,7 @@ public:
 
             for (int i = 0; i < s_m; i++)
                 for (int j = 0; j < s_n; j++) {
-                    double res = 0;
+                    Type res = 0;
                     for (int mi = 0; mi < m1.size_n; mi++)
                         res += m1[i][mi]*m2[mi][j];
                     c[i][j] = res;
@@ -180,7 +249,7 @@ public:
 
             for (int i = 0; i < s_m; i++)
                 for (int j = 0; j < s_n; j++) {
-                    double res = 0;
+                    Type res = 0;
                     for (int mi = 0; mi < size_n; mi++)
                         res += mtx[i][mi] * m[mi][j];
                     c[i][j] = res;
@@ -214,7 +283,7 @@ public:
     }
 
     friend matrix<Type> operator^(matrix<Type> m1, matrix<Type> m2) {
-        if (m1.size_n + m1.size_m == m2.size_m + m2.size_n) {
+        if (m1.sizes() == m2.sizes()) {
             int s_m = m1.size_m;
             int s_n = m1.size_n;
             matrix<Type> c(s_m, s_n);
@@ -223,24 +292,63 @@ public:
                 for (int j = 0; j < s_n; j++)
                     c[i][j] = m1[i][j] * m2[i][j];
             return c;
-        } else {
+        }
+        else if (m1.size_m == m2.size_m) {
+            int s_m = m1.size_m;
+            int s_n = m1.size_n;
+            matrix<Type> c(s_m, s_n);
+
+            for (int i = 0; i < s_m; i++)
+                for (int j = 0; j < s_n; j++)
+                    c[i][j] = m1[i][j] * m2[i][0];
+            return c;
+        }
+        else {
             cout << "Matrix multiplication error:\n\tmatrix sizes do not match!" << endl;
             abort();
         }
     }
 
     matrix<Type>& operator^=(matrix<Type> m) {
-        if (size_n + size_m == m.size_m + m.size_n) {
-            int s_m = size_m;
-            int s_n = size_n;
-            matrix<Type> c(s_m, s_n);
-
-            for (int i = 0; i < s_m; i++)
-                for (int j = 0; j < s_n; j++)
-                    c[i][j] = mtx[i][j] * m[i][j];
-            return c;
-        } else {
+        if (sizes() == m.sizes()) {
+            for (int i = 0; i < size_m; i++)
+                for (int j = 0; j < size_n; j++)
+                    mtx[i][j] *= m[i][j];
+            return *this;
+        }
+        else if (size_m == m.size_m) {
+            for (int i = 0; i < size_m; i++)
+                for (int j = 0; j < size_n; j++)
+                    mtx[i][j] *= m[i][0];
+            return *this;
+        }
+        else {
             cout << "Matrix multiplication error:\n\tmatrix sizes do not match!" << endl;
+            abort();
+        }
+    }
+
+    friend matrix<Type> operator/(matrix<Type> m1, matrix<Type> m2) {
+        if (m1.sizes() == m2.sizes()) {
+            int m = m1.sizes()[0];
+            int n = m1.sizes()[1];
+            matrix<Type> c(m, n);
+            for (int i = 0; i < m; i++)
+                for (int j = 0; j < n; j++)
+                    c[i][j] = m1[i][j] / m2[i][j];
+            return c;
+        }
+        else if (m1.size_m == m2.size_m) {
+            int m = m1.size_m;
+            int n = m1.size_n;
+            matrix<Type> c(m, n);
+            for (int i = 0; i < m; i++)
+                for (int j = 0; j < n; j++)
+                    c[i][j] = m1[i][j] / m2[i][0];
+            return c;
+        }
+        else {
+            cout << "Error matrix:\n\tmatrix sizes do not match!" << endl;
             abort();
         }
     }
@@ -257,6 +365,25 @@ public:
             for (int j = 0; j < m.size_n; j++)
                 m[i][j] = x / m[i][j];
         return m;
+    }
+
+    matrix<Type>& operator/=(matrix<Type> m) {
+        if (sizes() == m.sizes()) {
+            for (int i = 0; i < size_m; i++)
+                for (int j = 0; j < size_n; j++)
+                    mtx[i][j] / m[i][j];
+            return *this;
+        }
+        else if (size_m == m.size_m) {
+            for (int i = 0; i < size_m; i++)
+                for (int j = 0; j < size_n; j++)
+                    mtx[i][j] /= m[i][0];
+            return *this;
+        }
+        else {
+            cout << "Error matrix:\n\tmatrix sizes do not match!" << endl;
+            abort();
+        }
     }
 
     matrix<Type>& operator/=(Type x) {
@@ -565,17 +692,19 @@ public:
 
     void print() {
         cout << '[';
+
         for (int i = 0; i < size_m; i++) {
             if (i != 0)
                 cout << ' ';
             cout << '[';
-            for (int j = 0; j < size_n; j++) {
+                for (int j = 0; j < size_n; j++) {
                 cout << mtx[i][j];
                 if (j + 1 < size_n)
-                    cout << ',';
+                    cout << ", ";
             }
+
             cout << ']';
-            if (i+1 != size_m)
+            if (i + 1 < size_m)
                 cout << endl;
         }
         cout << ']' << endl;
@@ -589,19 +718,6 @@ public:
             mtx.at(i).resize(n);
     }
 
-    matrix<Type> maximum() {
-        matrix c;
-        double max;
-        c.load_size(1, size_n);
-        for (int i = 0; i < size_n; i++) {
-            max = 0;
-            for (int j = 0; j < size_m; j++)
-                max = mtx[j][i] > max ? mtx[j][i] : max;
-            c[0][i] = max;
-        }
-        return c;
-    }
-
     /**e^x где x - каждый элемент матрицы*/
     matrix<Type> expa() {
         matrix c;
@@ -613,11 +729,30 @@ public:
     }
 
     Type sum() {
-        Type sum = 0;
+        Type summ = 0;
         for (int i = 0; i < size_m; i++)
             for (int j = 0; j < size_n; j++)
-                sum += mtx[i][j];
-        return sum;
+                summ += mtx[i][j];
+        return summ;
+    }
+
+    matrix<Type> sum_axis(int axis) {
+        if (axis == 1) {
+            matrix<Type> summ;
+            for (int i = 0; i < size_m; i++) {
+                matrix l = mtx[i];
+                summ.push_back(l.sum());
+            }
+            return summ;
+        }
+        else {
+            matrix summ = mtx[0];
+            for (int i = 1; i < size_m; i++) {
+                matrix l = mtx[i];
+                summ += l;
+            }
+            return summ;
+        }
     }
 
     /**Максимум из кадого столбца матрицы*/
@@ -651,6 +786,12 @@ public:
 
     }
 
+    void push_back(vector<Type> x) {
+        mtx.push_back(x);
+        size_m = mtx.size();
+        size_n = mtx[0].size();
+    }
+
     int size() {
         return size_m;
     }
@@ -659,21 +800,56 @@ public:
         vector<int> c  = {size_m, size_n};
         return c;
     }
+
+    void shuffle_matrix() {
+        auto rng = default_random_engine();
+        shuffle(mtx.begin(), mtx.end(), rng);
+    }
+
+    /**Получить срез матрицы*/
+    matrix<Type> slice(int start, int end) {
+        matrix<Type> c;
+        for (int i = start; i < end; i++)
+            c.push_back(mtx[i]);
+        return c;
+    }
+
+    /**Получить матрицы из элементов каждого столбца*/
+    template<class T>
+    matrix<matrix<T>> split() {
+        matrix<matrix<T>> c(1, size_n);
+        for (int i = 0; i < size_n; i++)   {
+            matrix<T> mat;
+            for (int j = 0; j < size_m; j++)
+                mat.push_back(mtx[j][i]);
+            c[0][i] = mat;
+        }
+        return c;
+    }
+
+
 private:
     vector<vector<Type>> mtx;
-    int size_m = 0, size_n = 1;
+    int size_m = 0, size_n = 0;
 };
 
 /**Фунция активации RELU*/
 template <class T>
 matrix<T> relu(matrix<T> mtx) {
-    return mtx.maximum();
+    matrix c = mtx;
+    return maximum(c, 0.);
 }
 
 template <class T>
 matrix<T> softmax(matrix<T> mtx) {
     matrix out = mtx.expa();
     return out/out.sum();
+}
+
+template <class T>
+matrix<T> softmax_batch(matrix<T> mtx) {
+    matrix out = mtx.expa();
+    return out/out.sum_axis(1);
 }
 
 /**Заполнить матрицу размерами m * n действительными числами от 0 до 1*/
@@ -696,6 +872,14 @@ double sparse_cross_entropy(matrix<T> z, int y) {
     return -log(z[0][y]);
 }
 
+template <class T>
+matrix<T> sparse_cross_entropy_batch(matrix<T> z, matrix<T> y) {
+    matrix<T> c(z.sizes()[0], 1);
+    for (int i = 0; i < y.sizes()[0]; i++)
+        c[i][0] = -log(z[i][y[i][0]]);
+    return c;
+}
+
 /**Получить вектор правильного класса*/
 matrix<double> to_full(int y, int num_classes) {
     matrix y_full = zeros(1, num_classes);
@@ -703,8 +887,56 @@ matrix<double> to_full(int y, int num_classes) {
     return y_full;
 }
 
+/**Получить вектор правильного класса*/
+template <class T>
+matrix<T> to_full_batch(matrix<T> y, int num_classes) {
+    matrix y_full = zeros(y.sizes()[0], num_classes);
+    for (int i = 0; i < y.sizes()[0]; i++)
+        y_full[i][y[i][0]] = 1;
+    return y_full;
+}
+
 /**Производная от функции активации RELU*/
 template <class T>
 matrix<double> relu_deriv(matrix<T> t) {
     return (matrix<double>) (t >= 0);
+}
+
+template <class T>
+matrix<T> maximum(matrix<T> m1, matrix<T> m2) {
+    if (m1.sizes() == m2.sizes()) {
+        int m = m1.sizes()[0];
+        int n = m1.sizes()[1];
+        matrix<T> c(m, n);
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                c[i][j] = m1[i][j] > m2[i][j] ? m1[i][j] : m2[i][j];
+        return c;
+    }
+    else {
+        cout << "Error matrix:\n\tmatrix sizes do not match!" << endl;
+        abort();
+    }
+}
+
+template <class T>
+matrix<T> maximum(matrix<T> m1, T x) {
+    int m = m1.sizes()[0];
+    int n = m1.sizes()[1];
+    matrix<T> c(m, n);
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            c[i][j] = m1[i][j] > x ? m1[i][j] : x;
+    return c;
+}
+
+template <class T>
+matrix<T> maximum(T x, matrix<T> m1) {
+    int m = m1.sizes()[0];
+    int n = m1.sizes()[1];
+    matrix<T> c(m, n);
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            c[i][j] = m1[i][j] > x ? m1[i][j] : x;
+    return c;
 }
